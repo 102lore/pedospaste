@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>skibidi toilet test0.1</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: black;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
+        #app {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #2f2f2f;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #444;
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+        }
+
+        .user-info span {
+            font-weight: bold;
+        }
+
+        .login-form, .signup-form, .post-form, .comment-form {
+            margin-bottom: 20px;
+        }
+
+        .login-form input, .signup-form input, .post-form input, .comment-form input, .post-form textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+        }
+
+        .post, .comment {
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #444;
+            border-radius: 5px;
+        }
+
+        .post .comments {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+
+        .admin-actions {
+            color: red;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .user-role {
+            margin-top: 10px;
+            font-weight: bold;
+            color: lightgreen;
+        }
+
+        .logout-btn {
+            padding: 5px 10px;
+            background-color: #444;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .switch-link {
+            color: lightblue;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <!-- User Info (Visible on top left) -->
+        <div id="user-info-section" class="user-info hidden">
+            <p><span>Username:</span> <span id="user-info-username">-</span></p>
+            <p><span>User ID:</span> <span id="user-info-id">-</span></p>
+            <p><span>Role:</span> <span id="user-info-role">-</span></p>
+        </div>
+
+        <!-- Sign Up form -->
+        <div id="signup-section" class="signup-form">
+            <h3>Sign Up</h3>
+            <input type="text" id="signup-username" placeholder="Enter username">
+            <input type="password" id="signup-password" placeholder="Enter password">
+            <button onclick="signUp()">Sign Up</button>
+            <p class="error" id="signup-error"></p>
+            <p>Already have an account? <span class="switch-link" onclick="showLoginForm()">Login here</span></p>
+        </div>
+
+        <!-- Login form -->
+        <div id="login-section" class="login-form hidden">
+            <h3>Login</h3>
+            <input type="text" id="login-username" placeholder="Enter username">
+            <input type="password" id="login-password" placeholder="Enter password">
+            <button onclick="login()">Login</button>
+            <p class="error" id="login-error"></p>
+            <p>Don't have an account? <span class="switch-link" onclick="showSignUpForm()">Sign up here</span></p>
+        </div>
+
+        <!-- Post form (hidden initially) -->
+        <div id="post-section" class="post-form hidden">
+            <h3>Create a Post</h3>
+            <input type="text" id="post-title" placeholder="Post title">
+            <textarea id="post-content" placeholder="Post content" rows="4"></textarea>
+            <button onclick="createPost()">Post</button>
+        </div>
+
+        <!-- Display Posts -->
+        <div id="posts-section">
+            <h3>Posts</h3>
+            <div id="posts"></div>
+        </div>
+
+        <!-- Admin controls (hidden initially) -->
+        <div id="admin-controls" class="hidden">
+            <h3>Admin Actions</h3>
+            <p>Only admins can delete posts.</p>
+        </div>
+
+        <!-- Display the role of the logged-in user -->
+        <div id="user-role-section" class="user-role hidden"></div>
+
+        <!-- Logout Button -->
+        <button id="logout-btn" class="logout-btn hidden" onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        let currentUser = null;
+        const posts = JSON.parse(localStorage.getItem('posts')) || [];
+        const admins = new Set();  // Set of admin user IDs
+        let userId = null;
+
+        // Simulated storage for user data (could be replaced with a database in a real app)
+        let usersDatabase = JSON.parse(localStorage.getItem('usersDatabase')) || {};
+
+        // Switch to Sign Up form
+        function showSignUpForm() {
+            document.getElementById('signup-section').classList.remove('hidden');
+            document.getElementById('login-section').classList.add('hidden');
+        }
+
+        // Switch to Login form
+        function showLoginForm() {
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('signup-section').classList.add('hidden');
+        }
+
+        // Sign Up function
+        function signUp() {
+            const username = document.getElementById('signup-username').value;
+            const password = document.getElementById('signup-password').value;
+
+            if (username.trim() && password.trim()) {
+                if (usersDatabase[username]) {
+                    document.getElementById('signup-error').textContent = "Username already exists.";
+                } else {
+                    // Add new user to the database
+                    usersDatabase[username] = { password: password, role: 'user' };
+                    localStorage.setItem('usersDatabase', JSON.stringify(usersDatabase));
+
+                    // Show login form after successful signup
+                    showLoginForm();
+                }
+            } else {
+                document.getElementById('signup-error').textContent = "Please enter both username and password.";
+            }
+        }
+
+        // Login function
+        function login() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            if (username.trim() && password.trim()) {
+                if (usersDatabase[username] && usersDatabase[username].password === password) {
+                    currentUser = username;
+                    userId = generateUserId(username);
+                    localStorage.setItem('userId', userId);
+                    localStorage.setItem('username', currentUser);
+
+                    // Update the user info section
+                    document.getElementById('user-info-username').textContent = currentUser;
+                    document.getElementById('user-info-id').textContent = userId;
+                    document.getElementById('user-info-role').textContent = usersDatabase[username].role;
+                    document.getElementById('user-info-section').classList.remove('hidden');
+
+                    // Check user role and assign accordingly
+                    if (usersDatabase[username].role === 'admin') {
+                        admins.add(reptorch72);  // Add to admin set
+                        document.getElementById('admin-controls').classList.remove('hidden');
+                        document.getElementById('user-role-section').innerHTML = `<strong>Role: Admin</strong>`;
+                    } else {
+                        document.getElementById('user-role-section').innerHTML = `<strong>Role: Regular User</strong>`;
+                    }
+
+                    // Show user role section
+                    document.getElementById('user-role-section').classList.remove('hidden');
+                    document.getElementById('logout-btn').classList.remove('hidden');  // Show logout button
+                    document.getElementById('login-section').classList.add('hidden');
+                    document.getElementById('post-section').classList.remove('hidden');
+                    loadPosts();
+                } else {
+                    document.getElementById('login-error').textContent = "Invalid username or password.";
+                }
+            } else {
+                document.getElementById('login-error').textContent = "Please enter both username and password.";
+            }
+        }
+
+        // Generate a unique user ID (for simplicity in this demo)
+        function generateUserId(username) {
+            return username + Math.floor(Math.random() * 1000);
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('username');
+            localStorage.removeItem('userId');
+            currentUser = null;
+            userId = null;
+            admins.clear();
+
+            // Clear user info from the top section
+            document.getElementById('user-info-section').classList.add('hidden');
+
+            // Reset the login form and hide the post section
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('post-section').classList.add('hidden');
+            document.getElementById('logout-btn').classList.add('hidden');
+        }
+
+        // Load posts from localStorage
+        function loadPosts() {
+            const postsContainer = document.getElementById('posts');
+            postsContainer.innerHTML = '';  // Clear previous posts
+
+            posts.forEach(post => {
+                const postDiv = document.createElement('div');
+                postDiv.classList.add('post');
+                postDiv.innerHTML = `
+                    <h4>${post.title}</h4>
+                    <p>${post.content}</p>
+                    <div class="comments">
+                        <h5>Comments:</h5>
+                        ${post.comments.map(comment => `<p class="comment">${comment}</p>`).join('')}
+                    </div>
+                `;
+                postsContainer.appendChild(postDiv);
+            });
+        }
+
+        // Create a new post
+        function createPost() {
+            const title = document.getElementById('post-title').value;
+            const content = document.getElementById('post-content').value;
+
+            if (title && content) {
+                const newPost = {
+                    title: title,
+                    content: content,
+                    comments: []
+                };
+                posts.push(newPost);
+                localStorage.setItem('posts', JSON.stringify(posts));
+                loadPosts();  // Refresh posts
+            }
+        }
+    </script>
+</body>
+</html>
